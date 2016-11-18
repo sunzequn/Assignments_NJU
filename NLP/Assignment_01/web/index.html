@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>输入法测试</title>
+  <meta charset="UTF-8">
+  <style>
+#input {
+    position: relative;
+    left: 50%;
+    margin-left: -200px;
+    width: 400px;
+    height: 300px;
+    margin-top: 200px;
+    border: solid 1px;
+}
+.ime span {
+    float: left;
+    line-height: 25px;
+}
+
+.ime-selection {
+    min-width: 4px;
+    margin-left: -2px;
+    margin-right: -2px;
+    animation: ime-selection 2s infinite;
+}
+
+.ime-candidate {
+    position: absolute;
+    border: solid 0;
+    border-radius: 4px;
+    background-color: #dde4e9;
+}
+
+.ime-candidate div {
+    padding: 8px 8px 0 8px;
+}
+
+.ime-candidate ol {
+    border-top: 2px solid #558abb;
+    padding: 0 8px 8px 32px;
+    margin: 0;
+}
+
+.ime-candidate input {
+    background: none;
+    border: none;
+}
+
+@keyframes ime-selection {
+    0%  {color: #fff}
+    50%  {color: #000}
+    100% {color: #fff}
+}
+  </style>
+</head>
+<body>
+  <div id="content">
+    <div id="input"></div>
+  </div>
+  <script type="text/javascript" src="main.js"></script>
+</body>
+</html>
