@@ -1,6 +1,9 @@
 .idea
+*.iml
+*.class
 
 /DM/Assignment_01/ICML/
+DS/DS_Assignments/RMI/target
 
 *.txt
 *.bin
