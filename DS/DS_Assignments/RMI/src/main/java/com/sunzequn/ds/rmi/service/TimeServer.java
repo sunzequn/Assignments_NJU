@@ -1,4 +1,4 @@
-package com.sunzequn.ds.rmi;
+package com.sunzequn.ds.rmi.service;
 
 import java.net.MalformedURLException;
 import java.rmi.AlreadyBoundException;

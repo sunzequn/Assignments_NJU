@@ -1,4 +1,4 @@
-package com.sunzequn.ds.rmi;
+package com.sunzequn.ds.rmi.service;
 
 import java.net.MalformedURLException;
 import java.rmi.Naming;
@@ -17,6 +17,9 @@ public class TimeClient {
         remote = (IRemote) Naming.lookup("rmi://localhost:8888/remote");
         //调用远程对象方法
         System.out.println("client:");
-        System.out.println(remote.generateTime());
+        while (true){
+            System.out.println(remote.generateTime());
+        }
+
     }
 }
