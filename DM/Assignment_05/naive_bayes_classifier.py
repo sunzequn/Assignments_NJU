@@ -8,7 +8,7 @@ def cal_prob_c(data_labels):
     total = len(data_labels)
     count = Counter(data_labels)
     for c in count.keys():
-        count[c] /= total
+        count[c] = (count[c] + 1) / (total + 2)
     return count
 
 
