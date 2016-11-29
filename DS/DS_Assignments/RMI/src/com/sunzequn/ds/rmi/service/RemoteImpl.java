@@ -6,9 +6,10 @@ import java.util.Calendar;
 
 /**
  * Created by Sloriac on 2016/11/24.
- *
  */
 public class RemoteImpl extends UnicastRemoteObject implements IRemote {
+
+    private String word;
 
     protected RemoteImpl() throws RemoteException {
     }
@@ -22,7 +23,16 @@ public class RemoteImpl extends UnicastRemoteObject implements IRemote {
         int hour = calendar.get(Calendar.HOUR_OF_DAY);
         int minute = calendar.get(Calendar.MINUTE);
         int second = calendar.get(Calendar.SECOND);
-        int millisecond = calendar.get(Calendar.MILLISECOND);
-        return (year + "/" + month + "/" + date + " " +hour + ":" +minute + ":" + second + ":" + millisecond);
+        return (year + "/" + month + "/" + date + " " +hour + ":" +minute + ":" + second);
+    }
+
+    @Override
+    public boolean validate(String word) throws RemoteException {
+        return this.word.equals(word);
+    }
+
+    @Override
+    public void setWord(String word) throws RemoteException {
+        this.word = word;
     }
 }
