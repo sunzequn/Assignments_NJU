@@ -52,10 +52,3 @@ def cal_acc(labels, pred_labels):
             acc_num += 1
     acc = acc_num / len(labels)
     return acc
-
-
-def if_equal(n1, n2):
-    if n1 == n2:
-        return 1
-    return -1
-

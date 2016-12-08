@@ -8,7 +8,7 @@ def cal_prob_c(data_labels):
     total = len(data_labels)
     count = Counter(data_labels)
     for c in count.keys():
-        count[c] /= total
+        count[c] = (count[c] + 1) / (total + 2)
     return count
 
 
@@ -83,7 +83,6 @@ def cal_prob_prediction_c(data_mat, data_labels, data_flag, vec, c, total_mat, t
 def cal_prob_prediction(data_mat, data_labels, data_flag, vec, cs, total_mat, total_labels, cond_prop_map, prop_map):
     res = 0
     prob = -1
-
     for c in cs:
         prob_c = cal_prob_prediction_c(data_mat, data_labels, data_flag, vec, c, total_mat, total_labels, cond_prop_map, prop_map)
         if prob_c > prob:
@@ -102,14 +101,3 @@ def pred(train_mat, train_labels, test_mat, data_flag, total_mat, total_labels):
         pred_lables.append(p)
     return np.array(pred_lables)
 
-
-if __name__ == '__main__':
-    cross_n = 10
-    # data_mat, data_labels, data_flag = read_data("german-assignment5.txt")
-    data_mat, data_labels, data_flag = read_data("breast-cancer-assignment5.txt")
-    train_n = int(data_mat.shape[0] / cross_n) * (cross_n - 1)
-    train_indexes, test_indexes = cross_validation_data(data_mat.shape[0], train_n)
-    train_mat, train_labels = data_mat[train_indexes, :], data_labels[train_indexes]
-    test_mat, test_labels = data_mat[test_indexes, :], data_labels[test_indexes]
-    pred_lables = pred(train_mat, train_labels, test_mat, data_flag, train_mat, train_labels)
-    print(cal_acc(test_labels, pred_lables))

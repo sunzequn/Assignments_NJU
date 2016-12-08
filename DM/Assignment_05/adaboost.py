@@ -10,32 +10,8 @@ def init_w(n):
         data_w.append(round(1 / n, 8))
     return np.array(data_w)
 
-#
-# def update_w(w, w_indexes, labels, pred_labels):
-#     # print("w : ", w.shape)
-#     # print("w index ", w_indexes.shape)
-#     # print("labels ", len(labels))
-#     e = 0
-#     num = 0
-#     for i in range(len(labels)):
-#         if pred_labels[i] != labels[i]:
-#             e += w[w_indexes[i]]
-#             num += 1
-#     if e == 0 or e >= 0.5:
-#         return w, 0, 0
-#     alpha = 0.5 * math.log((1 - e) / e)
-#     z = 0
-#     for i in range(len(labels)):
-#         z += (w[w_indexes[i]] * math.exp(-alpha * if_equal(pred_labels[i], labels[i])))
-#     for i in range(len(labels)):
-#         w[w_indexes[i]] = (w[w_indexes[i]] / z) * math.exp(-alpha * if_equal(pred_labels[i], labels[i]))
-#     return w, e, alpha
-
 
 def update_w(w, labels, pred_labels):
-    # print("w : ", w.shape)
-    # print("w index ", w_indexes.shape)
-    # print("labels ", len(labels))
     e = 0
     num = 0
     for i in range(len(labels)):
@@ -47,9 +23,9 @@ def update_w(w, labels, pred_labels):
     alpha = 0.5 * math.log((1 - e) / e)
     z = 0
     for i in range(len(labels)):
-        z += (w[i] * math.exp(-alpha * if_equal(pred_labels[i], labels[i])))
+        z += (w[i] * math.exp(-alpha * pred_labels[i] * labels[i]))
     for i in range(len(labels)):
-        w[i] = (w[i] / z) * math.exp(-alpha * if_equal(pred_labels[i], labels[i]))
+        w[i] = (w[i] / z) * math.exp(-alpha * pred_labels[i] * labels[i])
     return w, e, alpha
 
 
@@ -83,7 +59,6 @@ def adaboost(data_mat, data_labels, data_flag, iteration_n, cross_n):
             inner_train_mat = train_mat[inner_train_indexes, :]
             inner_train_labels = train_labels[inner_train_indexes]
         else:
-            inner_train_indexes = np.array([i for i in range(train_n)])
             inner_train_mat = train_mat
             inner_train_labels = train_labels
 
