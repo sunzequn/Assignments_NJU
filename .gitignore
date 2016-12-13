@@ -5,6 +5,7 @@
 /DM/Assignment_01/ICML/
 DS/DS_Assignments/RMI/target
 
+*.csv
 *.txt
 *.bin
 *.png
