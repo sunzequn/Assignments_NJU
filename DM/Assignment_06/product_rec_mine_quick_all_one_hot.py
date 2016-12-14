@@ -7,28 +7,30 @@ import xgboost as xgb
 # 去除了'ult_fec_cli_1t' 'fecha_alta'
 # 'fecha_dato'与'ncodpers'单独处理
 
-# features_list = ['ind_empleado', 'pais_residencia', 'sexo', 'age',
-#                  'ind_nuevo', 'antiguedad', 'indrel','indrel_1mes',
-#                  'tiprel_1mes', 'indresi', 'indext', 'conyuemp',
-#                  'canal_entrada', 'indfall', 'cod_prov', 'nomprov',
-#                  'ind_actividad_cliente', 'renta', 'segmento']
-
-# 去了省份相关特征
-# features_list = ['ind_empleado', 'pais_residencia', 'sexo', 'age',
-#                  'ind_nuevo', 'antiguedad', 'indrel','indrel_1mes',
-#                  'tiprel_1mes', 'indresi', 'indext', 'conyuemp',
-#                  'canal_entrada', 'indfall',
-#                  'ind_actividad_cliente', 'renta', 'segmento']
+all_features = ['fecha_dato', 'ncodpers', 'ind_empleado', 'pais_residencia', 'sexo',
+                'age', 'fecha_alta', 'ind_nuevo', 'antiguedad', 'indrel',
+                'ult_fec_cli_1t', 'indrel_1mes', 'tiprel_1mes', 'indresi', 'indext',
+                'conyuemp', 'canal_entrada', 'indfall', 'tipodom', 'cod_prov',
+                'nomprov', 'ind_actividad_cliente', 'renta', 'segmento']
 
 # 最少特征
-features_list = ['ind_empleado', 'pais_residencia', 'sexo', 'age',
-                 'ind_nuevo', 'antiguedad',
-                 # 'tiprel_1mes', 'indresi', 'indext',
-                 'canal_entrada', 'nomprov',
-                 'ind_actividad_cliente', 'renta', 'segmento']
+good_features = ['ind_empleado', 'pais_residencia', 'sexo',
+                 'age', 'ind_nuevo', 'antiguedad',
+                 'canal_entrada', 'nomprov', 'ind_actividad_cliente',
+                 'renta', 'segmento']
+
+bad_features = list(set(all_features).difference(set(good_features)))
+
+
+print("全部特征(不含产品)数量: ", len(all_features))
+print("选用特征(不含产品)数量: ", len(good_features))
+print("弃用特征(不含产品)数量: ", len(bad_features))
 
 # 去掉了'ind_ahor_fin_ult1', 'ind_aval_fin_ult1',
-products_list = ['ind_cco_fin_ult1', 'ind_cder_fin_ult1', 'ind_cno_fin_ult1', 'ind_ctju_fin_ult1',
+products_list = [
+                # 'ind_ahor_fin_ult1', 'ind_aval_fin_ult1',
+                 'ind_cco_fin_ult1', 'ind_cder_fin_ult1', 'ind_cno_fin_ult1',
+                 'ind_ctju_fin_ult1',
                  'ind_ctma_fin_ult1', 'ind_ctop_fin_ult1', 'ind_ctpp_fin_ult1',
                  'ind_deco_fin_ult1', 'ind_deme_fin_ult1', 'ind_dela_fin_ult1',
                  'ind_ecue_fin_ult1', 'ind_fond_fin_ult1', 'ind_hip_fin_ult1',
@@ -37,7 +39,7 @@ products_list = ['ind_cco_fin_ult1', 'ind_cder_fin_ult1', 'ind_cno_fin_ult1', 'i
                  'ind_nomina_ult1', 'ind_nom_pens_ult1', 'ind_recibo_ult1']
 
 continuous_features = ['age', 'antiguedad', 'renta']
-discrete_features = list(set(features_list) ^ set(continuous_features))
+discrete_features = list(set(good_features) ^ set(continuous_features))
 
 
 def handle_nan(df_col, v):
@@ -82,20 +84,18 @@ def handle_renta(df):
 
 def handle_discrete_feature(df):
     print("开始处理 离散值...")
+    f_mapping = {}
     for f in discrete_features:
         # 处理缺失值: NA '' NaN
-        df[f] = handle_nan(df[f], "SUNZEQUN")
-        values = list(df[f].unique())
+        df[f] = handle_nan(df[f], "NAN")
         mapping = {}
-        # 特殊情况
-        if f == 'indrel_1mes':
-            mapping = {'SUNZEQUN': 0, '1.0': 1, '1': 1, '2.0': 2, '2': 2, '3.0': 3, '3': 3, '4.0': 4, '4': 4, 'P': 5}
-        else:
-            for v in values:
-                mapping[str(v)] = values.index(v)
-        print(f, mapping)
-        df[f] = df[f].map(lambda x: mapping.get(str(x)))
-        df[f].astype(int)
+        values = list(df[f].unique())
+        for v in values:
+            l = [0] * len(values)
+            l[values.index(v)] = 1
+            mapping[str(v)] = l
+        f_mapping[str(f)] = mapping
+    return df, f_mapping
 
 
 def handle_prod(df):
@@ -124,63 +124,79 @@ def clean_train_data(file):
     handle_antiguedad(df_orign)
     handle_renta(df_orign)
     # 处理离散值
-    handle_discrete_feature(df_orign)
+    df_orign, one_hot_mapping = handle_discrete_feature(df_orign)
     # 处理产品
     handle_prod(df_orign)
     # 处理日期
     handle_date(df_orign)
+
     print("数据预处理耗时: " + str(datetime.datetime.now() - t))
-    return df_orign
+    return df_orign, one_hot_mapping
 
 
 def cut_df(df, dates):
     return df[df['fecha_dato'].isin(dates)]
 
 
-def process_train_data(df, list_dates):
+def gene_features(row, one_hot_mapping):
+    features = []
+
+    features.append(row['age'])
+    features.append(row['antiguedad'])
+    features.append(row['renta'])
+    features.append(row["month"])
+
+    for f in discrete_features:
+        v = row[f]
+        feature = one_hot_mapping[str(f)].get(str(v), [0] * len(one_hot_mapping[str(f)]))
+        if len(feature) < 2:
+            print("error")
+        features = features + feature
+    return features
+
+
+def process_train_data(df, one_hot_mapping):
     print("开始构造训练数据...")
-    prev_dates = list_dates[0]
-    post_dates = list_dates[1]
     t = datetime.datetime.now()
-    dates = set()
-    for date in prev_dates:
-        dates.add(date)
-    for date in post_dates:
-        dates.add(date)
-    df = cut_df(df, list(dates))
     train_list = []
     train_label = []
-
     num = 0
     f = True
     user_products_dict = {}
-    prev_dates = list_dates[0]
-    post_dates = list_dates[1]
+    dates = set()
     for index, row in df.iterrows():
         num += 1
-        if num % 100000 == 0:
+        if num % 200000 == 0:
             print(num)
         usr = int(row['ncodpers'])
-
-        if row['fecha_dato'] in post_dates:
+        date = row['fecha_dato'].strip()
+        dates.add(date)
+        if len(dates) > 1:
             prev_products = user_products_dict.get(usr, [0] * len(products_list))
             post_products = row[products_list].values.tolist()
             new_products = [max(x1 - x2, 0) for (x1, x2) in zip(post_products, prev_products)]
             if sum(new_products) > 0:
                 for ind, prod in enumerate(new_products):
                     if prod > 0:
-                        features = row[features_list + ['month']].values.tolist()
+                        features = gene_features(row, one_hot_mapping)
                         if f:
-                            print(len(features), len(prev_products))
+                            print("训练数据特征数量: ", len(features), len(prev_products))
                             f = False
                         train_list.append(features + prev_products)
                         train_label.append(ind)
 
-        if row['fecha_dato'] in prev_dates:
-            user_products_dict[usr] = row[products_list].values.tolist()
+        user_products_dict[usr] = row[products_list].values.tolist()
 
+    print("日期", dates)
     print("构造训练数据耗时: " + str(datetime.datetime.now() - t))
     return train_list, train_label, user_products_dict
+
+
+def handle_discrete_feature_test(df):
+    print("开始处理 离散值...")
+    for f in discrete_features:
+        # 处理缺失值: NA '' NaN
+        df[f] = handle_nan(df[f], "NAN")
 
 
 def clean_test_data(file):
@@ -188,7 +204,6 @@ def clean_test_data(file):
     t = datetime.datetime.now()
     df_orign = pd.read_csv(file)
     print("读取文件耗时: " + str(datetime.datetime.now() - t))
-
     print("开始进行数据预处理...")
     t = datetime.datetime.now()
     # 处理连续值，规格化
@@ -196,14 +211,14 @@ def clean_test_data(file):
     handle_antiguedad(df_orign)
     handle_renta(df_orign)
     # 处理离散值
-    handle_discrete_feature(df_orign)
+    handle_discrete_feature_test(df_orign)
     # 处理日期
     handle_date(df_orign)
     print("数据预处理耗时: " + str(datetime.datetime.now() - t))
     return df_orign
 
 
-def process_test_data(df, user_products_dict):
+def process_test_data(df, user_products_dict, one_hot_mapping):
     print("开始构造测试数据...")
     t = datetime.datetime.now()
     test_list = []
@@ -211,41 +226,39 @@ def process_test_data(df, user_products_dict):
     f = True
     for index, row in df.iterrows():
         num += 1
-        if num % 200000 == 0:
+        if num % 100000 == 0:
             print(num)
         usr = int(row['ncodpers'])
         prev_products = user_products_dict.get(usr, [0] * len(products_list))
-        features = row[features_list + ['month']].values.tolist()
+        features = gene_features(row, one_hot_mapping)
         if f:
-            print(len(features), len(prev_products))
+            print("测试数据特征数量: ", len(features), len(prev_products))
             f = False
         test_list.append(features + prev_products)
-    print(num)
     print("构造测试数据耗时: " + str(datetime.datetime.now() - t))
-
     return test_list
 
 
 def xgb_model(train_X, train_y, seed_val=123):
-    param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 22,
+    param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 24,
              'eval_metric': "mlogloss", 'min_child_weight': 2, 'subsample': 0.9, 'colsample_bytree': 0.9,
              'seed': seed_val}
-    num_rounds = 100
+    num_rounds = 200
     plst = list(param.items())
     xgtrain = xgb.DMatrix(train_X, label=train_y)
-    model = xgb.train(plst, xgtrain, num_rounds)
+    watchlist = [(xgtrain, 'train')]
+    model = xgb.train(plst, xgtrain, num_rounds, evals=watchlist)
     return model
 
 
-def rec(train_file, test_file, res_file, list_dates=[['2015-05-28', '2016-05-28'], ['2015-06-28', '2016-06-28']]):
-    train_df = clean_train_data(train_file)
-    train_list, train_label, user_products_dict = process_train_data(train_df, list_dates)
+def rec(train_file, test_file, res_file):
+    train_df, one_hot_mapping = clean_train_data(train_file)
+    train_list, train_label, user_products_dict = process_train_data(train_df, one_hot_mapping)
     test_df = clean_test_data(test_file)
-    test_list = process_test_data(test_df, user_products_dict)
+    test_list = process_test_data(test_df, user_products_dict, one_hot_mapping)
 
     train_X = np.array(train_list)
     train_y = np.array(train_label)
-    print(np.unique(train_y))
     print(train_X.shape, train_y.shape)
 
     test_X = np.array(test_list)
@@ -262,7 +275,7 @@ def rec(train_file, test_file, res_file, list_dates=[['2015-05-28', '2016-05-28'
     print("Getting the top products..")
     target_cols = np.array(products_list)
     preds = np.argsort(preds, axis=1)
-    preds = np.fliplr(preds)[:, :7]
+    preds = np.fliplr(preds)[:, :8]
     test_id = np.array(pd.read_csv(test_file, usecols=['ncodpers'])['ncodpers'])
     final_preds = [" ".join(list(target_cols[pred])) for pred in preds]
     out_df = pd.DataFrame({'ncodpers': test_id, 'added_products': final_preds})
@@ -272,12 +285,7 @@ def rec(train_file, test_file, res_file, list_dates=[['2015-05-28', '2016-05-28'
 if __name__ == '__main__':
     train_file = "train_ver2.csv"
     test_file = 'test_ver2.csv'
-    res_file = 'res_quick.csv'
-    pre_dates = ['2015-05-28', '2016-01-28', '2016-02-28', '2016-03-28', '2016-04-28', '2016-05-28']
-    post_dates = ['2015-06-28', '2016-02-28', '2016-03-28', '2016-04-28', '2016-05-28', '2016-06-28']
-    dates = [pre_dates, post_dates]
+    res_file = 'res_all_more_features.csv'
     t = datetime.datetime.now()
     rec(train_file, test_file, res_file)
     print("总耗时: ", datetime.datetime.now() - t)
-
-
