@@ -42,8 +42,11 @@ continuous_features = ['age', 'antiguedad', 'renta']
 discrete_features = list(set(good_features) ^ set(continuous_features))
 
 
-def handle_nan(df_col, v):
-    return df_col.map(lambda x: v if pd.isnull(x) or str(x).strip() == 'NA' or str(x).strip() == '' else x)
+def handle_nan(df_col, v, is_strip=False):
+    if is_strip:
+        return df_col.map(lambda x: v if pd.isnull(x) or str(x).strip() == 'NA' or str(x).strip() == '' else str(x).strip())
+    else:
+        return df_col.map(lambda x: v if pd.isnull(x) or str(x).strip() == 'NA' or str(x).strip() == '' else x)
 
 
 def handle_age(df):
@@ -87,7 +90,7 @@ def handle_discrete_feature(df):
     f_mapping = {}
     for f in discrete_features:
         # 处理缺失值: NA '' NaN
-        df[f] = handle_nan(df[f], "NAN")
+        df[f] = handle_nan(df[f], "NAN", is_strip=True)
         mapping = {}
         values = list(df[f].unique())
         for v in values:
@@ -96,6 +99,13 @@ def handle_discrete_feature(df):
             mapping[str(v)] = l
         f_mapping[str(f)] = mapping
     return df, f_mapping
+
+
+def handle_discrete_feature_test(df):
+    print("开始处理 离散值...")
+    for f in discrete_features:
+        # 处理缺失值: NA '' NaN
+        df[f] = handle_nan(df[f], "NAN", is_strip=True)
 
 
 def handle_prod(df):
@@ -128,7 +138,7 @@ def clean_train_data(file):
     # 处理产品
     handle_prod(df_orign)
     # 处理日期
-    handle_date(df_orign)
+    # handle_date(df_orign)
 
     print("数据预处理耗时: " + str(datetime.datetime.now() - t))
     return df_orign, one_hot_mapping
@@ -140,14 +150,13 @@ def cut_df(df, dates):
 
 def gene_features(row, one_hot_mapping):
     features = []
-
     features.append(row['age'])
     features.append(row['antiguedad'])
     features.append(row['renta'])
-    features.append(row["month"])
+    # features.append(row["month"])
 
     for f in discrete_features:
-        v = row[f]
+        v = row[f].strip()
         feature = one_hot_mapping[str(f)].get(str(v), [0] * len(one_hot_mapping[str(f)]))
         if len(feature) < 2:
             print("error")
@@ -201,13 +210,6 @@ def process_train_data(df, list_dates, one_hot_mapping):
     return train_list, train_label, user_products_dict
 
 
-def handle_discrete_feature_test(df):
-    print("开始处理 离散值...")
-    for f in discrete_features:
-        # 处理缺失值: NA '' NaN
-        df[f] = handle_nan(df[f], "NAN")
-
-
 def clean_test_data(file):
     # 读取数据
     t = datetime.datetime.now()
@@ -222,7 +224,7 @@ def clean_test_data(file):
     # 处理离散值
     handle_discrete_feature_test(df_orign)
     # 处理日期
-    handle_date(df_orign)
+    # handle_date(df_orign)
     print("数据预处理耗时: " + str(datetime.datetime.now() - t))
     return df_orign
 
@@ -249,7 +251,7 @@ def process_test_data(df, user_products_dict, one_hot_mapping):
 
 
 def xgb_model(train_X, train_y, seed_val=123):
-    param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 24,
+    param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 22,
              'eval_metric': "mlogloss", 'min_child_weight': 2, 'subsample': 0.9, 'colsample_bytree': 0.9,
              'seed': seed_val}
     num_rounds = 200
@@ -295,7 +297,7 @@ def rec(train_file, test_file, res_file, list_dates=[['2015-05-28', '2016-05-28'
 if __name__ == '__main__':
     train_file = "train_ver2.csv"
     test_file = 'test_ver2.csv'
-    res_file = 'res_all__quick_hot.csv'
+    res_file = 'res_quick_hot.csv'
     t = datetime.datetime.now()
     rec(train_file, test_file, res_file)
     print("总耗时: ", datetime.datetime.now() - t)

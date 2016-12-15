@@ -6,6 +6,6 @@ def f():
 
 if __name__ == '__main__':
     f()
+    a = 'a'
     print(a)
-    b = {'a':1, 'b':2}
-    print(b.get('c', 22))
+    print(str(a))

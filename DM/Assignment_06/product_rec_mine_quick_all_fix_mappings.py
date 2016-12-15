@@ -28,7 +28,8 @@ features_list = ['ind_empleado', 'pais_residencia', 'sexo', 'age',
                  'ind_actividad_cliente', 'renta', 'segmento']
 
 # 去掉了'ind_ahor_fin_ult1', 'ind_aval_fin_ult1',
-products_list = ['ind_ahor_fin_ult1', 'ind_aval_fin_ult1', 'ind_cco_fin_ult1', 'ind_cder_fin_ult1', 'ind_cno_fin_ult1', 'ind_ctju_fin_ult1',
+products_list = ['ind_ahor_fin_ult1', 'ind_aval_fin_ult1', 'ind_cco_fin_ult1', 'ind_cder_fin_ult1', 'ind_cno_fin_ult1',
+                 'ind_ctju_fin_ult1',
                  'ind_ctma_fin_ult1', 'ind_ctop_fin_ult1', 'ind_ctpp_fin_ult1',
                  'ind_deco_fin_ult1', 'ind_deme_fin_ult1', 'ind_dela_fin_ult1',
                  'ind_ecue_fin_ult1', 'ind_fond_fin_ult1', 'ind_hip_fin_ult1',
@@ -40,8 +41,11 @@ continuous_features = ['age', 'antiguedad', 'renta']
 discrete_features = list(set(features_list) ^ set(continuous_features))
 
 
-def handle_nan(df_col, v):
-    return df_col.map(lambda x: v if pd.isnull(x) or str(x).strip() == 'NA' or str(x).strip() == '' else x)
+def handle_nan(df_col, v, is_strip=False):
+    if is_strip:
+        return df_col.map(lambda x: v if pd.isnull(x) or str(x).strip() == 'NA' or str(x).strip() == '' else str(x).strip())
+    else:
+        return df_col.map(lambda x: v if pd.isnull(x) or str(x).strip() == 'NA' or str(x).strip() == '' else x)
 
 
 def handle_age(df):
@@ -85,7 +89,7 @@ def handle_discrete_feature(df):
     f_mapping = {}
     for f in discrete_features:
         # 处理缺失值: NA '' NaN
-        df[f] = handle_nan(df[f], "SUNZEQUN")
+        df[f] = handle_nan(df[f], "SUNZEQUN", is_strip=True)
         values = list(df[f].unique())
         mapping = {}
         # 特殊情况
@@ -105,9 +109,9 @@ def handle_discrete_feature_test(df, mappings):
     print("开始处理 离散值...")
     for f in discrete_features:
         # 处理缺失值: NA '' NaN
-        df[f] = handle_nan(df[f], "SUNZEQUN")
+        df[f] = handle_nan(df[f], "SUNZEQUN", is_strip=True)
         mapping = mappings[f]
-        df[f] = df[f].map(lambda x: mapping.get(str(x)))
+        df[f] = df[f].map(lambda x: mapping.get(str(x), -1))
         df[f].astype(int)
 
 
