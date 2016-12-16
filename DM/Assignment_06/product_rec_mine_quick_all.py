@@ -215,7 +215,7 @@ def process_test_data(df, user_products_dict):
     return test_list
 
 
-def xgb_model(train_X, train_y, seed_val=123):
+def xgb_model(train_X, train_y, seed_val=0):
     param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 24,
              'eval_metric': "mlogloss", 'min_child_weight': 2, 'subsample': 0.9, 'colsample_bytree': 0.9,
              'seed': seed_val}

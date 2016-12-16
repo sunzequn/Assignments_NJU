@@ -1,49 +1,26 @@
 import csv
 import datetime
+import random
 from operator import sub
 import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn import preprocessing, ensemble
 
-mapping_dict = {
-    'ind_empleado': {-99: 0, 'N': 1, 'B': 2, 'F': 3, 'A': 4, 'S': 5},
+mapping_dict = {  # 'ind_empleado'  : {-99:0, 'N':1, 'B':2, 'F':3, 'A':4, 'S':5},
     'sexo': {'V': 0, 'H': 1, -99: 2},
-    'ind_nuevo': {'0': 0, '1': 1, -99: 2},
-    # 'indrel'        : {'1':0, '99':1, -99:2},
+    'ind_nuevo': {'0': 0, '1': 1, -99: 1},
+    # 'indrel'        : {'1':0, '99':1, -99:1},
     # 'indrel_1mes'   : {-99:0, '1.0':1, '1':1, '2.0':2, '2':2, '3.0':3, '3':3, '4.0':4, '4':4, 'P':5},
-    # 'tiprel_1mes'   : {-99:0, 'I':1, 'A':2, 'P':3, 'R':4, 'N':5},
-    # 'indresi'       : {-99:0, 'S':1, 'N':2},
-    # 'indext'        : {-99:0, 'S':1, 'N':2},
+    'tiprel_1mes': {-99: 0, 'I': 1, 'A': 2, 'P': 3, 'R': 4, 'N': 5},
+    'indresi': {-99: 0, 'S': 1, 'N': 2},
+    'indext': {-99: 0, 'S': 1, 'N': 2},
     # 'conyuemp'      : {-99:0, 'S':1, 'N':2},
-    # 'indfall'       : {-99:0, 'S':1, 'N':2},
+    'indfall': {-99: 0, 'S': 1, 'N': 2},
     # 'tipodom'       : {-99:0, '1':1},
-    'nomprov': {'GIRONA': 0, 'ZAMORA': 1, 'BARCELONA': 2, 'SALAMANCA': 3, 'BURGOS': 4, 'HUESCA': 5, 'NAVARRA': 6,
-                'AVILA': 7, 'SEGOVIA': 8, 'LUGO': 9, 'LERIDA': 10, 'MADRID': 11, 'ALICANTE': 12, 'SORIA': 13,
-                'SEVILLA': 14, 'CANTABRIA': 15, 'BALEARS, ILLES': 16, 'VALLADOLID': 17, 'PONTEVEDRA': 18,
-                'VALENCIA': 19, 'TERUEL': 20, 'CORUÑA, A': 21, 'OURENSE': 22, 'JAEN': 23, 'CUENCA': 24, 'BIZKAIA': 25,
-                'CASTELLON': 26, 'RIOJA, LA': 27, 'ALBACETE': 28, 'BADAJOZ': 29, 'MURCIA': 30, 'CADIZ': 31, -99: 32,
-                'ALMERIA': 33, 'GUADALAJARA': 34, 'PALENCIA': 35, 'PALMAS, LAS': 36, 'CORDOBA': 37, 'HUELVA': 38,
-                'GRANADA': 39, 'ASTURIAS': 40, 'SANTA CRUZ DE TENERIFE': 41, 'MELILLA': 42, 'TARRAGONA': 43,
-                'ALAVA': 44, 'CEUTA': 45, 'MALAGA': 46, 'CIUDAD REAL': 47, 'ZARAGOZA': 48, 'TOLEDO': 49, 'LEON': 50,
-                'GIPUZKOA': 51, 'CACERES': 52},
-    # cod_prov':{-99.0:0, 1.0:1, 2.0:2, 3.0:3, 4.0:4, 5.0:5, 6.0:6, 7.0:7, 8.0:8, 9.0:9, 10.0:10, 11.0:11, 12.0:12, 13.0:13, 14.0:14, 15.0:15, 16.0:16, 17.0:17, 18.0:18, 19.0:19, 20.0:20, 21.0:21, 22.0:22, 23.0:23, 24.0:24, 25.0:25, 26.0:26, 27.0:27, 28.0:28, 29.0:29, 30.0:30, 31.0:31, 32.0:32, 33.0:33, 34.0:34, 35.0:35, 36.0:36, 37.0:37, 38.0:38, 39.0:39, 40.0:40, 41.0:41, 42.0:42, 43.0:43, 44.0:44, 45.0:45, 46.0:46, 47.0:47, 48.0:48, 49.0:49, 50.0:50, 51.0:51, 52.0:52},
     'ind_actividad_cliente': {'0': 0, '1': 1, -99: 2},
-    'segmento': {'02 - PARTICULARES': 0, '03 - UNIVERSITARIO': 1, '01 - TOP': 2, -99: 2},
-    'pais_residencia': {'LV': 102, 'BE': 12, 'BG': 50, 'BA': 61, 'BM': 117, 'BO': 62, 'JP': 82, 'JM': 116, 'BR': 17,
-                        'BY': 64, 'BZ': 113, 'RU': 43, 'RS': 89, 'RO': 41, 'GW': 99, 'GT': 44, 'GR': 39, 'GQ': 73,
-                        'GE': 78, 'GB': 9, 'GA': 45, 'GN': 98, 'GM': 110, 'GI': 96, 'GH': 88, 'OM': 100, 'HR': 67,
-                        'HU': 106, 'HK': 34, 'HN': 22, 'AD': 35, 'PR': 40, 'PT': 26, 'PY': 51, 'PA': 60, 'PE': 20,
-                        'PK': 84, 'PH': 91, 'PL': 30, 'EE': 52, 'EG': 74, 'ZA': 75, 'EC': 19, 'AL': 25, 'VN': 90,
-                        'ET': 54, 'ZW': 114, 'ES': 0, 'MD': 68, 'UY': 77, 'MM': 94, 'ML': 104, 'US': 15, 'MT': 118,
-                        'MR': 48, 'UA': 49, 'MX': 16, 'IL': 42, 'FR': 8, 'MA': 38, 'FI': 23, 'NI': 33, 'NL': 7,
-                        'NO': 46, 'NG': 83, 'NZ': 93, 'CI': 57, 'CH': 3, 'CO': 21, 'CN': 28, 'CM': 55, 'CL': 4, 'CA': 2,
-                        'CG': 101, 'CF': 109, 'CD': 112, 'CZ': 36, 'CR': 32, 'CU': 72, 'KE': 65, 'KH': 95, 'SV': 53,
-                        'SK': 69, 'KR': 87, 'KW': 92, 'SN': 47, 'SL': 97, 'KZ': 111, 'SA': 56, 'SG': 66, 'SE': 24,
-                        'DO': 11, 'DJ': 115, 'DK': 76, 'DE': 10, 'DZ': 80, 'MK': 105, -99: 1, 'LB': 81, 'TW': 29,
-                        'TR': 70, 'TN': 85, 'LT': 103, 'LU': 59, 'TH': 79, 'TG': 86, 'LY': 108, 'AE': 37, 'VE': 14,
-                        'IS': 107, 'IT': 18, 'AO': 71, 'AR': 13, 'AU': 63, 'AT': 6, 'IN': 31, 'IE': 5, 'QA': 58,
-                        'MZ': 27},
+    'segmento': {'02 - PARTICULARES': 0, '03 - UNIVERSITARIO': 1, '01 - TOP': 2, -99: 3},
+    # 'pais_residencia' : {'LV': 102, 'BE': 12, 'BG': 50, 'BA': 61, 'BM': 117, 'BO': 62, 'JP': 82, 'JM': 116, 'BR': 17, 'BY': 64, 'BZ': 113, 'RU': 43, 'RS': 89, 'RO': 41, 'GW': 99, 'GT': 44, 'GR': 39, 'GQ': 73, 'GE': 78, 'GB': 9, 'GA': 45, 'GN': 98, 'GM': 110, 'GI': 96, 'GH': 88, 'OM': 100, 'HR': 67, 'HU': 106, 'HK': 34, 'HN': 22, 'AD': 35, 'PR': 40, 'PT': 26, 'PY': 51, 'PA': 60, 'PE': 20, 'PK': 84, 'PH': 91, 'PL': 30, 'EE': 52, 'EG': 74, 'ZA': 75, 'EC': 19, 'AL': 25, 'VN': 90, 'ET': 54, 'ZW': 114, 'ES': 0, 'MD': 68, 'UY': 77, 'MM': 94, 'ML': 104, 'US': 15, 'MT': 118, 'MR': 48, 'UA': 49, 'MX': 16, 'IL': 42, 'FR': 8, 'MA': 38, 'FI': 23, 'NI': 33, 'NL': 7, 'NO': 46, 'NG': 83, 'NZ': 93, 'CI': 57, 'CH': 3, 'CO': 21, 'CN': 28, 'CM': 55, 'CL': 4, 'CA': 2, 'CG': 101, 'CF': 109, 'CD': 112, 'CZ': 36, 'CR': 32, 'CU': 72, 'KE': 65, 'KH': 95, 'SV': 53, 'SK': 69, 'KR': 87, 'KW': 92, 'SN': 47, 'SL': 97, 'KZ': 111, 'SA': 56, 'SG': 66, 'SE': 24, 'DO': 11, 'DJ': 115, 'DK': 76, 'DE': 10, 'DZ': 80, 'MK': 105, -99: 1, 'LB': 81, 'TW': 29, 'TR': 70, 'TN': 85, 'LT': 103, 'LU': 59, 'TH': 79, 'TG': 86, 'LY': 108, 'AE': 37, 'VE': 14, 'IS': 107, 'IT': 18, 'AO': 71, 'AR': 13, 'AU': 63, 'AT': 6, 'IN': 31, 'IE': 5, 'QA': 58, 'MZ': 27},
     'canal_entrada': {'013': 49, 'KHP': 160, 'KHQ': 157, 'KHR': 161, 'KHS': 162, 'KHK': 10, 'KHL': 0, 'KHM': 12,
                       'KHN': 21, 'KHO': 13, 'KHA': 22, 'KHC': 9, 'KHD': 2, 'KHE': 1, 'KHF': 19, '025': 159, 'KAC': 57,
                       'KAB': 28, 'KAA': 39, 'KAG': 26, 'KAF': 23, 'KAE': 30, 'KAD': 16, 'KAK': 51, 'KAJ': 41, 'KAI': 35,
@@ -85,21 +62,20 @@ def getTarget(row):
         tlist.append(target)
     return tlist
 
-col_nan = set()
+
 def getIndex(row, col):
     val = row[col].strip()
     if val not in ['', 'NA']:
         ind = mapping_dict[col][val]
     else:
-        col_nan.add(col + "___" + row[col].strip())
         ind = mapping_dict[col][-99]
     return ind
 
 
 def getAge(row):
     mean_age = 40.
-    min_age = 20.
-    max_age = 90.
+    min_age = 1.
+    max_age = 110.
     range_age = max_age - min_age
     age = row['age'].strip()
     if age == 'NA' or age == '':
@@ -134,17 +110,115 @@ def getRent(row):
     min_value = 0.
     max_value = 1500000.
     range_value = max_value - min_value
-    missing_value = 101850.
+    renta_dict = {'ALBACETE': 76895, 'ALICANTE': 60562, 'ALMERIA': 77815, 'ASTURIAS': 83995, 'AVILA': 78525,
+                  'BADAJOZ': 60155, 'BALEARS, ILLES': 114223, 'BARCELONA': 135149, 'BURGOS': 87410, 'NAVARRA': 101850,
+                  'CACERES': 78691, 'CADIZ': 75397, 'CANTABRIA': 87142, 'CASTELLON': 70359, 'CEUTA': 333283,
+                  'CIUDAD REAL': 61962, 'CORDOBA': 63260, 'CORUÑA, A': 103567, 'CUENCA': 70751, 'GIRONA': 100208,
+                  'GRANADA': 80489,
+                  'GUADALAJARA': 100635, 'HUELVA': 75534, 'HUESCA': 80324, 'JAEN': 67016, 'LEON': 76339,
+                  'LERIDA': 59191, 'LUGO': 68219, 'MADRID': 141381, 'MALAGA': 89534, 'MELILLA': 116469,
+                  'GIPUZKOA': 101850,
+                  'MURCIA': 68713, 'OURENSE': 78776, 'PALENCIA': 90843, 'PALMAS, LAS': 78168, 'PONTEVEDRA': 94328,
+                  'RIOJA, LA': 91545, 'SALAMANCA': 88738, 'SANTA CRUZ DE TENERIFE': 83383, 'ALAVA': 101850,
+                  'BIZKAIA': 101850,
+                  'SEGOVIA': 81287, 'SEVILLA': 94814, 'SORIA': 71615, 'TARRAGONA': 81330, 'TERUEL': 64053,
+                  'TOLEDO': 65242, 'UNKNOWN': 103689, 'VALENCIA': 73463, 'VALLADOLID': 92032, 'ZAMORA': 73727,
+                  'ZARAGOZA': 98827}
+
+    # missing_value = 101850.
     rent = row['renta'].strip()
     if rent == 'NA' or rent == '':
-        rent = missing_value
+        if row['nomprov'] == 'NA' or row['nomprov'] == '':
+            rent = float(renta_dict['UNKNOWN'])
+        else:
+            rent = float(renta_dict[row['nomprov']])
     else:
         rent = float(rent)
         if rent < min_value:
             rent = min_value
         elif rent > max_value:
             rent = max_value
+
     return round((rent - min_value) / range_value, 6)
+
+
+def getMarriageIndex(row, age, sex, income):
+    marriage_age = 28
+    modifier = 0
+    if sex == 'V':
+        modifier += -2
+    if income <= 101850:
+        modifier += -1
+
+    marriage_age_mod = marriage_age + modifier
+
+    if age <= marriage_age_mod:
+        return 0
+    else:
+        return 1
+
+
+def getMonth(row):
+    return int(row['fecha_dato'].split('-')[1])
+
+
+def getjoinMonth(row):
+    if row['fecha_alta'].strip() == 'NA' or row['fecha_alta'].strip() == '':
+        return int(random.choice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]))
+    else:
+        return int(row['fecha_alta'].split('-')[1])
+
+
+def processDataMK(in_file_name, cust_dict, lag_cust_dict):
+    x_vars_list = []
+    y_vars_list = []
+
+    for row in csv.DictReader(in_file_name):
+        if row['fecha_dato'] not in ['2015-01-28', '2015-05-28', '2015-06-28', '2016-01-28', '2016-05-28',
+                                     '2016-06-28']:
+            continue
+        # Leave out first month
+        cust_id = int(row['ncodpers'])
+        # print(row['fecha_dato'])
+        if (row['fecha_dato'] in ['2015-01-28', '2016-01-28']):
+            target_list = getTarget(row)
+            lag_cust_dict[cust_id] = target_list[:]
+            continue
+
+        if (row['fecha_dato'] in ['2015-05-28', '2016-05-28']):
+            target_list = getTarget(row)
+            cust_dict[cust_id] = target_list[:]
+            continue
+
+        x_vars = []
+        for col in cat_cols:
+            x_vars.append(getIndex(row, col))
+        sex = getIndex(row, 'sexo')
+        age = getAge(row)
+        x_vars.append(age)
+        x_vars.append(getMonth(row))
+        x_vars.append(getjoinMonth(row))
+        x_vars.append(getCustSeniority(row))
+        income = getRent(row)
+        x_vars.append(income)
+        x_vars.append(getMarriageIndex(row, age, sex, income))
+        if row['fecha_dato'] == '2016-06-28':
+            prev_target_list = cust_dict.get(cust_id, [0] * 22)
+            lag_target_list = lag_cust_dict.get(cust_id, [0] * 22)
+            x_vars_list.append(x_vars + prev_target_list + lag_target_list)
+        elif row['fecha_dato'] == '2015-06-28':
+            prev_target_list = cust_dict.get(cust_id, [0] * 22)
+            lag_target_list = lag_cust_dict.get(cust_id, [0] * 22)
+            target_list = getTarget(row)
+            new_products = [max(x1 - x2, 0) for (x1, x2) in zip(target_list, prev_target_list)]
+            if sum(new_products) > 0:
+                for ind, prod in enumerate(new_products):
+                    if prod > 0:
+                        assert len(prev_target_list) == 22
+                        x_vars_list.append(x_vars + prev_target_list + lag_target_list)
+                        y_vars_list.append(ind)
+
+    return x_vars_list, y_vars_list, cust_dict, lag_cust_dict
 
 
 def processData(in_file_name, cust_dict):
@@ -164,9 +238,13 @@ def processData(in_file_name, cust_dict):
         x_vars = []
         for col in cat_cols:
             x_vars.append(getIndex(row, col))
-        x_vars.append(getAge(row))
+        sex = getIndex(row, 'sexo')
+        age = getAge(row)
+        x_vars.append(age)
         x_vars.append(getCustSeniority(row))
-        x_vars.append(getRent(row))
+        income = getRent(row)
+        x_vars.append(income)
+        x_vars.append(getMarriageIndex(row, age, sex, income))
 
         if row['fecha_dato'] == '2016-06-28':
             prev_target_list = cust_dict.get(cust_id, [0] * 22)
@@ -185,20 +263,19 @@ def processData(in_file_name, cust_dict):
     return x_vars_list, y_vars_list, cust_dict
 
 
-def runXGB(train_X, train_y, seed_val=125):
+def runXGB(train_X, train_y, seed_val=0):
     param = {}
     param['objective'] = 'multi:softprob'
-    param['eta'] = 0.05
-    param['max_depth'] = 6
+    param['eta'] = 0.036
+    param['max_depth'] = 8
     param['silent'] = 1
     param['num_class'] = 22
     param['eval_metric'] = "mlogloss"
-    param['min_child_weight'] = 2.05
-    param['subsample'] = 0.92
-    param['gamma'] = 0.65
-    param['colsample_bytree'] = 0.9
+    param['min_child_weight'] = 1
+    param['subsample'] = 0.75
+    param['colsample_bylevel'] = 0.85
     param['seed'] = seed_val
-    num_rounds = 115
+    num_rounds = 55
 
     plst = list(param.items())
     xgtrain = xgb.DMatrix(train_X, label=train_y)
@@ -208,23 +285,26 @@ def runXGB(train_X, train_y, seed_val=125):
 
 if __name__ == "__main__":
     start_time = datetime.datetime.now()
-    data_path = ""
+    data_path = "../input/"
     train_file = open(data_path + "train_ver2.csv")
-    x_vars_list, y_vars_list, cust_dict = processData(train_file, {})
+    print('Starting file processing')
+    # x_vars_list, y_vars_list, cust_dict = processData(train_file, {})
+    x_vars_list, y_vars_list, cust_dict, lag_cust_dict = processDataMK(train_file, {}, {})
+    print('Finished file processing')
     train_X = np.array(x_vars_list)
     train_y = np.array(y_vars_list)
     print(np.unique(train_y))
     del x_vars_list, y_vars_list
     train_file.close()
     print(train_X.shape, train_y.shape)
+    print(datetime.datetime.now() - start_time)
     test_file = open(data_path + "test_ver2.csv")
-    x_vars_list, y_vars_list, cust_dict = processData(test_file, cust_dict)
+    x_vars_list, y_vars_list, cust_dict, lag_cust_dict = processDataMK(test_file, cust_dict, lag_cust_dict)
     test_X = np.array(x_vars_list)
     del x_vars_list
     test_file.close()
     print(test_X.shape)
-
-    print(col_nan)
+    print(datetime.datetime.now() - start_time)
 
     print("Building model..")
     model = runXGB(train_X, train_y, seed_val=0)
@@ -233,11 +313,12 @@ if __name__ == "__main__":
     xgtest = xgb.DMatrix(test_X)
     preds = model.predict(xgtest)
     del test_X, xgtest
+    print(datetime.datetime.now() - start_time)
 
     print("Getting the top products..")
     target_cols = np.array(target_cols)
     preds = np.argsort(preds, axis=1)
-    preds = np.fliplr(preds)[:, :8]
+    preds = np.fliplr(preds)[:, :7]
     test_id = np.array(pd.read_csv(data_path + "test_ver2.csv", usecols=['ncodpers'])['ncodpers'])
     final_preds = [" ".join(list(target_cols[pred])) for pred in preds]
     out_df = pd.DataFrame({'ncodpers': test_id, 'added_products': final_preds})

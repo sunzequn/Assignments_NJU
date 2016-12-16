@@ -200,7 +200,7 @@ def process_test_data(df, list_dates):
     return test_list
 
 
-def runXGB(train_X, train_y, seed_val=123):
+def runXGB(train_X, train_y, seed_val=0):
     param = {}
     param['objective'] = 'multi:softprob'
     param['eta'] = 0.05

@@ -250,14 +250,14 @@ def process_test_data(df, user_products_dict, one_hot_mapping):
     return test_list
 
 
-def xgb_model(train_X, train_y, seed_val=123):
+def xgb_model(train_X, train_y, seed_val=0):
     param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 22,
              'eval_metric': "mlogloss", 'min_child_weight': 2, 'subsample': 0.9, 'colsample_bytree': 0.9,
              'seed': seed_val}
     num_rounds = 200
     plst = list(param.items())
     xgtrain = xgb.DMatrix(train_X, label=train_y)
-    h = xgb.cv(plst, xgtrain, num_rounds, nfold=5)
+    h = xgb.cv(plst, xgtrain, num_rounds, nfold=5, callbacks=[xgb.callback.print_evaluation(show_stdv=True)])
     print(h)
 
 

@@ -250,11 +250,11 @@ def process_test_data(df, user_products_dict, one_hot_mapping):
     return test_list
 
 
-def xgb_model(train_X, train_y, seed_val=123):
+def xgb_model(train_X, train_y, seed_val=0):
     param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 22,
              'eval_metric': "mlogloss", 'min_child_weight': 2, 'subsample': 0.9, 'colsample_bytree': 0.9,
              'seed': seed_val}
-    num_rounds = 200
+    num_rounds = 150
     plst = list(param.items())
     xgtrain = xgb.DMatrix(train_X, label=train_y)
     watchlist = [(xgtrain, 'train')]
@@ -297,7 +297,7 @@ def rec(train_file, test_file, res_file, list_dates=[['2015-05-28', '2016-05-28'
 if __name__ == '__main__':
     train_file = "train_ver2.csv"
     test_file = 'test_ver2.csv'
-    res_file = 'res_quick_hot.csv'
+    res_file = 'res_quick_hot_depth6_round150.csv'
     t = datetime.datetime.now()
     rec(train_file, test_file, res_file)
     print("总耗时: ", datetime.datetime.now() - t)

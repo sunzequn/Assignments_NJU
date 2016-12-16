@@ -242,52 +242,34 @@ def process_test_data(df, user_products_dict, one_hot_mapping):
     return test_list
 
 
-def xgb_model(train_X, train_y, seed_val=123):
+def xgb_model(train_X, train_y, seed_val=0):
     param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 22,
              'eval_metric': "mlogloss", 'min_child_weight': 2, 'subsample': 0.9, 'colsample_bytree': 0.9,
              'seed': seed_val}
     num_rounds = 200
     plst = list(param.items())
     xgtrain = xgb.DMatrix(train_X, label=train_y)
-    h = xgb.cv(plst, xgtrain, num_rounds, nfold=5)
+
+    h = xgb.cv(plst, xgtrain, num_rounds, nfold=5, callbacks=[xgb.callback.print_evaluation(show_stdv=True)])
     print(h)
 
 
 def rec(train_file, test_file, res_file):
     train_df, one_hot_mapping = clean_train_data(train_file)
     train_list, train_label, user_products_dict = process_train_data(train_df, one_hot_mapping)
-    test_df = clean_test_data(test_file)
-    test_list = process_test_data(test_df, user_products_dict, one_hot_mapping)
 
     train_X = np.array(train_list)
     train_y = np.array(train_label)
     print(train_X.shape, train_y.shape)
 
-    test_X = np.array(test_list)
-    print(test_X.shape)
+    xgb_model(train_X, train_y, seed_val=0)
 
-    print("Building model..")
-    model = xgb_model(train_X, train_y, seed_val=0)
-    del train_X, train_y
-    print("Predicting..")
-    xgtest = xgb.DMatrix(test_X)
-    preds = model.predict(xgtest)
-    del test_X, xgtest
-
-    print("Getting the top products..")
-    target_cols = np.array(products_list)
-    preds = np.argsort(preds, axis=1)
-    preds = np.fliplr(preds)[:, :8]
-    test_id = np.array(pd.read_csv(test_file, usecols=['ncodpers'])['ncodpers'])
-    final_preds = [" ".join(list(target_cols[pred])) for pred in preds]
-    out_df = pd.DataFrame({'ncodpers': test_id, 'added_products': final_preds})
-    out_df.to_csv(res_file, index=False)
 
 
 if __name__ == '__main__':
     train_file = "train_ver2.csv"
     test_file = 'test_ver2.csv'
-    res_file = 'res_all_month_one_hot.csv'
+    res_file = 'res_all_month_one_hot_depth8_round200.csv'
     t = datetime.datetime.now()
     rec(train_file, test_file, res_file)
     print("总耗时: ", datetime.datetime.now() - t)
