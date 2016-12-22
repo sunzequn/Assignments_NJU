@@ -181,8 +181,7 @@ def process_train_data(df, list_dates, one_hot_mapping):
     num = 0
     f = True
     user_products_dict = {}
-    prev_dates = list_dates[0]
-    post_dates = list_dates[1]
+
     for index, row in df.iterrows():
         num += 1
         if num % 100000 == 0:

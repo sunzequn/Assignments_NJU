@@ -40,6 +40,7 @@ products_list = [
 
 continuous_features = ['age', 'antiguedad', 'renta']
 discrete_features = list(set(good_features) ^ set(continuous_features))
+print(discrete_features)
 
 
 def handle_nan(df_col, v, is_strip=False):
@@ -49,14 +50,29 @@ def handle_nan(df_col, v, is_strip=False):
         return df_col.map(lambda x: v if pd.isnull(x) or str(x).strip() == 'NA' or str(x).strip() == '' else x)
 
 
+# def handle_age(df):
+#     print("开始处理 age...")
+#     # 格式问题，处理空格与字符串年龄
+#     df["age"] = handle_nan(df["age"], np.NaN)
+#     df["age"] = df["age"].map(lambda x: int(x.strip()) if (isinstance(x, str)) else x)
+#     # 18-100岁区间之外的数据预处理; 缺失值填充
+#     df.loc[df.age < 18, "age"] = df.loc[(df.age >= 18) & (df.age <= 20), "age"].mean(skipna=True)
+#     df.loc[df.age > 100, "age"] = df.loc[(df.age >= 98) & (df.age <= 100), "age"].mean(skipna=True)
+#     df["age"].fillna(df["age"].mean(), inplace=True)
+#     # 规格化至[0, 1]
+#     age_min = df["age"].min()  # 18
+#     age_max = df["age"].max()  # 100
+#     df["age"] = df["age"].map(lambda x: (x - age_min) / (age_max - age_min))
+
+
 def handle_age(df):
     print("开始处理 age...")
     # 格式问题，处理空格与字符串年龄
     df["age"] = handle_nan(df["age"], np.NaN)
     df["age"] = df["age"].map(lambda x: int(x.strip()) if (isinstance(x, str)) else x)
     # 18-100岁区间之外的数据预处理; 缺失值填充
-    df.loc[df.age < 18, "age"] = df.loc[(df.age >= 18) & (df.age <= 20), "age"].mean(skipna=True)
-    df.loc[df.age > 100, "age"] = df.loc[(df.age >= 98) & (df.age <= 100), "age"].mean(skipna=True)
+    df.loc[df.age < 18, "age"] = 18
+    df.loc[df.age > 100, "age"] = 100
     df["age"].fillna(df["age"].mean(), inplace=True)
     # 规格化至[0, 1]
     age_min = df["age"].min()  # 18
@@ -74,11 +90,39 @@ def handle_antiguedad(df):
     df['antiguedad'] = df['antiguedad'].map(lambda x: (x - min_v) / (max_v - min_v))
 
 
+# def handle_renta(df):
+#     print("开始处理 renta...")
+#     # mean_value = df['renta'].mean(skipna=True)
+#     df['renta'] = handle_nan(df['renta'], 101850)
+#     df["renta"] = df["renta"].map(lambda x: x.strip() if (isinstance(x, str)) else x)
+#     df['renta'] = df['renta'].astype(float)
+#     min_value = df['renta'].min()
+#     max_value = df['renta'].max()
+#     df['renta'] = df['renta'].map(lambda x: (x - min_value) / (max_value - min_value))
+
+
 def handle_renta(df):
     print("开始处理 renta...")
-    # mean_value = df['renta'].mean(skipna=True)
-    df['renta'] = handle_nan(df['renta'], 101850)
-    df["renta"] = df["renta"].map(lambda x: x.strip() if (isinstance(x, str)) else x)
+    renta_dict = {'ALBACETE': 76895, 'ALICANTE': 60562, 'ALMERIA': 77815, 'ASTURIAS': 83995, 'AVILA': 78525,
+                  'BADAJOZ': 60155, 'BALEARS, ILLES': 114223, 'BARCELONA': 135149, 'BURGOS': 87410, 'NAVARRA': 101850,
+                  'CACERES': 78691, 'CADIZ': 75397, 'CANTABRIA': 87142, 'CASTELLON': 70359, 'CEUTA': 333283,
+                  'CIUDAD REAL': 61962, 'CORDOBA': 63260, 'CORUÑA, A': 103567, 'CUENCA': 70751, 'GIRONA': 100208,
+                  'GRANADA': 80489,
+                  'GUADALAJARA': 100635, 'HUELVA': 75534, 'HUESCA': 80324, 'JAEN': 67016, 'LEON': 76339,
+                  'LERIDA': 59191, 'LUGO': 68219, 'MADRID': 141381, 'MALAGA': 89534, 'MELILLA': 116469,
+                  'GIPUZKOA': 101850,
+                  'MURCIA': 68713, 'OURENSE': 78776, 'PALENCIA': 90843, 'PALMAS, LAS': 78168, 'PONTEVEDRA': 94328,
+                  'RIOJA, LA': 91545, 'SALAMANCA': 88738, 'SANTA CRUZ DE TENERIFE': 83383, 'ALAVA': 101850,
+                  'BIZKAIA': 101850,
+                  'SEGOVIA': 81287, 'SEVILLA': 94814, 'SORIA': 71615, 'TARRAGONA': 81330, 'TERUEL': 64053,
+                  'TOLEDO': 65242, 'UNKNOWN': 103689, 'VALENCIA': 73463, 'VALLADOLID': 92032, 'ZAMORA': 73727,
+                  'ZARAGOZA': 98827}
+    df['renta'] = handle_nan(df['renta'], "NAN", is_strip=True)
+    for index, row in df.iterrows():
+        rent = row['renta']
+        if rent == 'NAN':
+            row['renta'] = float(renta_dict.get(row['nomprov'], renta_dict['UNKNOWN']))
+
     df['renta'] = df['renta'].astype(float)
     min_value = df['renta'].min()
     max_value = df['renta'].max()
@@ -246,7 +290,7 @@ def xgb_model(train_X, train_y, seed_val=0):
     param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 22,
              'eval_metric': "mlogloss", 'min_child_weight': 2, 'subsample': 0.9, 'colsample_bytree': 0.9,
              'seed': seed_val}
-    num_rounds = 150
+    num_rounds = 200
     plst = list(param.items())
     xgtrain = xgb.DMatrix(train_X, label=train_y)
     watchlist = [(xgtrain, 'train')]
@@ -288,7 +332,7 @@ def rec(train_file, test_file, res_file):
 if __name__ == '__main__':
     train_file = "train_ver2.csv"
     test_file = 'test_ver2.csv'
-    res_file = 'res_all_month_one_hot_depth8_round200.csv'
+    res_file = 'res_all_month_one_hot_6_200_renta_age.csv'
     t = datetime.datetime.now()
     rec(train_file, test_file, res_file)
     print("总耗时: ", datetime.datetime.now() - t)

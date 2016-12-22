@@ -55,8 +55,8 @@ def handle_age(df):
     df["age"] = handle_nan(df["age"], np.NaN)
     df["age"] = df["age"].map(lambda x: int(x.strip()) if (isinstance(x, str)) else x)
     # 18-100岁区间之外的数据预处理; 缺失值填充
-    df.loc[df.age < 18, "age"] = df.loc[(df.age >= 18) & (df.age <= 20), "age"].mean(skipna=True)
-    df.loc[df.age > 100, "age"] = df.loc[(df.age >= 98) & (df.age <= 100), "age"].mean(skipna=True)
+    df.loc[df.age < 18, "age"] = 18
+    df.loc[df.age > 100, "age"] = 100
     df["age"].fillna(df["age"].mean(), inplace=True)
     # 规格化至[0, 1]
     age_min = df["age"].min()  # 18
@@ -69,16 +69,35 @@ def handle_antiguedad(df):
     df['antiguedad'] = handle_nan(df['antiguedad'], 0)
     df["antiguedad"] = df["antiguedad"].map(lambda x: int(x.strip()) if (isinstance(x, str)) else x)
     df['antiguedad'] = df['antiguedad'].astype(int)
+    df["antiguedad"] = df["antiguedad"].map(lambda x: 0 if x < 0 else x)
     min_v = df['antiguedad'].min()
     max_v = df['antiguedad'].max()
+    print(min_v, max_v)
     df['antiguedad'] = df['antiguedad'].map(lambda x: (x - min_v) / (max_v - min_v))
 
 
 def handle_renta(df):
     print("开始处理 renta...")
-    # mean_value = df['renta'].mean(skipna=True)
-    df['renta'] = handle_nan(df['renta'], 101850)
-    df["renta"] = df["renta"].map(lambda x: x.strip() if (isinstance(x, str)) else x)
+    renta_dict = {'ALBACETE': 76895, 'ALICANTE': 60562, 'ALMERIA': 77815, 'ASTURIAS': 83995, 'AVILA': 78525,
+                  'BADAJOZ': 60155, 'BALEARS, ILLES': 114223, 'BARCELONA': 135149, 'BURGOS': 87410, 'NAVARRA': 101850,
+                  'CACERES': 78691, 'CADIZ': 75397, 'CANTABRIA': 87142, 'CASTELLON': 70359, 'CEUTA': 333283,
+                  'CIUDAD REAL': 61962, 'CORDOBA': 63260, 'CORUÑA, A': 103567, 'CUENCA': 70751, 'GIRONA': 100208,
+                  'GRANADA': 80489,
+                  'GUADALAJARA': 100635, 'HUELVA': 75534, 'HUESCA': 80324, 'JAEN': 67016, 'LEON': 76339,
+                  'LERIDA': 59191, 'LUGO': 68219, 'MADRID': 141381, 'MALAGA': 89534, 'MELILLA': 116469,
+                  'GIPUZKOA': 101850,
+                  'MURCIA': 68713, 'OURENSE': 78776, 'PALENCIA': 90843, 'PALMAS, LAS': 78168, 'PONTEVEDRA': 94328,
+                  'RIOJA, LA': 91545, 'SALAMANCA': 88738, 'SANTA CRUZ DE TENERIFE': 83383, 'ALAVA': 101850,
+                  'BIZKAIA': 101850,
+                  'SEGOVIA': 81287, 'SEVILLA': 94814, 'SORIA': 71615, 'TARRAGONA': 81330, 'TERUEL': 64053,
+                  'TOLEDO': 65242, 'UNKNOWN': 103689, 'VALENCIA': 73463, 'VALLADOLID': 92032, 'ZAMORA': 73727,
+                  'ZARAGOZA': 98827}
+    df['renta'] = handle_nan(df['renta'], "NAN", is_strip=True)
+    for index, row in df.iterrows():
+        rent = row['renta']
+        if rent == 'NAN':
+            row['renta'] = float(renta_dict.get(row['nomprov'], renta_dict['UNKNOWN']))
+
     df['renta'] = df['renta'].astype(float)
     min_value = df['renta'].min()
     max_value = df['renta'].max()
@@ -166,10 +185,13 @@ def gene_features(row, one_hot_mapping):
 
 def process_train_data(df, list_dates, one_hot_mapping):
     print("开始构造训练数据...")
-    prev_dates = list_dates[0]
-    post_dates = list_dates[1]
+    pprev_dates = list_dates[0]
+    prev_dates = list_dates[1]
+    post_dates = list_dates[2]
     t = datetime.datetime.now()
     dates = set()
+    for date in pprev_dates:
+        dates.add(date)
     for date in prev_dates:
         dates.add(date)
     for date in post_dates:
@@ -180,7 +202,8 @@ def process_train_data(df, list_dates, one_hot_mapping):
 
     num = 0
     f = True
-    user_products_dict = {}
+    pre_products_dict = {}
+    pprev_products_dict = {}
 
     for index, row in df.iterrows():
         num += 1
@@ -189,7 +212,8 @@ def process_train_data(df, list_dates, one_hot_mapping):
         usr = int(row['ncodpers'])
 
         if row['fecha_dato'] in post_dates:
-            prev_products = user_products_dict.get(usr, [0] * len(products_list))
+            pprev_products = pprev_products_dict.get(usr, [0] * len(products_list))
+            prev_products = pre_products_dict.get(usr, [0] * len(products_list))
             post_products = row[products_list].values.tolist()
             new_products = [max(x1 - x2, 0) for (x1, x2) in zip(post_products, prev_products)]
             if sum(new_products) > 0:
@@ -197,16 +221,19 @@ def process_train_data(df, list_dates, one_hot_mapping):
                     if prod > 0:
                         features = gene_features(row, one_hot_mapping)
                         if f:
-                            print(len(features), len(prev_products))
+                            print(len(features), len(prev_products), len(pprev_products))
                             f = False
-                        train_list.append(features + prev_products)
+                        train_list.append(features + prev_products + pprev_products)
                         train_label.append(ind)
 
         if row['fecha_dato'] in prev_dates:
-            user_products_dict[usr] = row[products_list].values.tolist()
+            pre_products_dict[usr] = row[products_list].values.tolist()
+
+        if row['fecha_dato'] in pprev_dates:
+            pprev_products_dict[usr] = row[products_list].values.tolist()
 
     print("构造训练数据耗时: " + str(datetime.datetime.now() - t))
-    return train_list, train_label, user_products_dict
+    return train_list, train_label, pre_products_dict, pprev_products_dict
 
 
 def clean_test_data(file):
@@ -228,7 +255,7 @@ def clean_test_data(file):
     return df_orign
 
 
-def process_test_data(df, user_products_dict, one_hot_mapping):
+def process_test_data(df, prev_products_dict, pprev_products_dict, one_hot_mapping):
     print("开始构造测试数据...")
     t = datetime.datetime.now()
     test_list = []
@@ -239,12 +266,13 @@ def process_test_data(df, user_products_dict, one_hot_mapping):
         if num % 100000 == 0:
             print(num)
         usr = int(row['ncodpers'])
-        prev_products = user_products_dict.get(usr, [0] * len(products_list))
+        pprev_products = pprev_products_dict.get(usr, [0] * len(products_list))
+        prev_products = prev_products_dict.get(usr, [0] * len(products_list))
         features = gene_features(row, one_hot_mapping)
         if f:
-            print("测试数据特征数量: ", len(features), len(prev_products))
+            print("测试数据特征数量: ", len(features), len(prev_products), len(pprev_products))
             f = False
-        test_list.append(features + prev_products)
+        test_list.append(features + prev_products + pprev_products)
     print("构造测试数据耗时: " + str(datetime.datetime.now() - t))
     return test_list
 
@@ -261,12 +289,12 @@ def xgb_model(train_X, train_y, seed_val=0):
     return model
 
 
-def rec(train_file, test_file, res_file, list_dates=[['2015-05-28', '2016-05-28'], ['2015-06-28', '2016-06-28']]):
+def rec(train_file, test_file, res_file, list_dates=[['2015-04-28', '2016-04-28'], ['2015-05-28', '2016-05-28'], ['2015-06-28', '2016-06-28']]):
     train_df, one_hot_mapping = clean_train_data(train_file)
     print(one_hot_mapping)
-    train_list, train_label, user_products_dict = process_train_data(train_df, list_dates, one_hot_mapping)
+    train_list, train_label, pre_products_dict, pprev_products_dict = process_train_data(train_df, list_dates, one_hot_mapping)
     test_df = clean_test_data(test_file)
-    test_list = process_test_data(test_df, user_products_dict, one_hot_mapping)
+    test_list = process_test_data(test_df, pre_products_dict, pprev_products_dict, one_hot_mapping)
 
     train_X = np.array(train_list)
     train_y = np.array(train_label)
@@ -296,7 +324,7 @@ def rec(train_file, test_file, res_file, list_dates=[['2015-05-28', '2016-05-28'
 if __name__ == '__main__':
     train_file = "train_ver2.csv"
     test_file = 'test_ver2.csv'
-    res_file = 'res_quick_hot_depth6_round150.csv'
+    res_file = 'res_quick_hot_muilt_month_6_150_fixed_new_feature.csv'
     t = datetime.datetime.now()
     rec(train_file, test_file, res_file)
     print("总耗时: ", datetime.datetime.now() - t)

@@ -71,6 +71,7 @@ def handle_antiguedad(df):
     df['antiguedad'] = df['antiguedad'].astype(int)
     min_v = df['antiguedad'].min()
     max_v = df['antiguedad'].max()
+    print(min_v, max_v)
     df['antiguedad'] = df['antiguedad'].map(lambda x: (x - min_v) / (max_v - min_v))
 
 
@@ -185,8 +186,7 @@ def process_train_data(df, list_dates, one_hot_mapping):
     f = True
     pre_products_dict = {}
     pprev_products_dict = {}
-    prev_dates = list_dates[0]
-    post_dates = list_dates[1]
+
     for index, row in df.iterrows():
         num += 1
         if num % 100000 == 0:
@@ -271,7 +271,7 @@ def xgb_model(train_X, train_y, seed_val=0):
     return model
 
 
-def rec(train_file, test_file, res_file, list_dates=[['2015-01-28', '2016-01-28'], ['2015-05-28', '2016-05-28'], ['2015-06-28', '2016-06-28']]):
+def rec(train_file, test_file, res_file, list_dates=[['2015-04-28', '2016-04-28'], ['2015-05-28', '2016-05-28'], ['2015-06-28', '2016-06-28']]):
     train_df, one_hot_mapping = clean_train_data(train_file)
     print(one_hot_mapping)
     train_list, train_label, pre_products_dict, pprev_products_dict = process_train_data(train_df, list_dates, one_hot_mapping)
@@ -306,7 +306,7 @@ def rec(train_file, test_file, res_file, list_dates=[['2015-01-28', '2016-01-28'
 if __name__ == '__main__':
     train_file = "train_ver2.csv"
     test_file = 'test_ver2.csv'
-    res_file = 'res_quick_hot_muilt_month_6_150.csv'
+    res_file = 'res_quick_hot_muilt_month_6_150_fixed_45-6.csv'
     t = datetime.datetime.now()
     rec(train_file, test_file, res_file)
     print("总耗时: ", datetime.datetime.now() - t)

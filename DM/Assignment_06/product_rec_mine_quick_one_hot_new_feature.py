@@ -69,8 +69,10 @@ def handle_antiguedad(df):
     df['antiguedad'] = handle_nan(df['antiguedad'], 0)
     df["antiguedad"] = df["antiguedad"].map(lambda x: int(x.strip()) if (isinstance(x, str)) else x)
     df['antiguedad'] = df['antiguedad'].astype(int)
+    df["antiguedad"] = df["antiguedad"].map(lambda x: 0 if x < 0 else x)
     min_v = df['antiguedad'].min()
     max_v = df['antiguedad'].max()
+    print(min_v, max_v)
     df['antiguedad'] = df['antiguedad'].map(lambda x: (x - min_v) / (max_v - min_v))
 
 
@@ -269,7 +271,7 @@ def process_test_data(df, user_products_dict, one_hot_mapping):
 
 def xgb_model(train_X, train_y, seed_val=0):
     param = {'objective': 'multi:softprob', 'eta': 0.05, 'max_depth': 6, 'silent': 1, 'num_class': 22,
-             'eval_metric': "mlogloss", 'min_child_weight': 2, 'subsample': 0.9, 'colsample_bytree': 0.9,
+             'eval_metric': "mlogloss", 'min_child_weight': 2, 'subsample': 0.8, 'colsample_bytree': 0.9,
              'seed': seed_val}
     num_rounds = 150
     plst = list(param.items())
@@ -314,7 +316,7 @@ def rec(train_file, test_file, res_file, list_dates=[['2015-05-28', '2016-05-28'
 if __name__ == '__main__':
     train_file = "train_ver2.csv"
     test_file = 'test_ver2.csv'
-    res_file = 'res_quick_hot_depth6_round150_renta.csv'
+    res_file = 'res_quick_hot_depth6_round150_renta_subsample0.8.csv'
     t = datetime.datetime.now()
     rec(train_file, test_file, res_file)
     print("总耗时: ", datetime.datetime.now() - t)

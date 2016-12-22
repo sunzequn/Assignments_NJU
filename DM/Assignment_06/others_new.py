@@ -69,7 +69,10 @@ def getIndex(row, col):
         ind = mapping_dict[col][val]
     else:
         ind = mapping_dict[col][-99]
-    return ind
+    l = [0] * len(mapping_dict[col])
+    l[ind] = 1
+
+    return l
 
 
 def getAge(row):
@@ -174,13 +177,13 @@ def processDataMK(in_file_name, cust_dict, lag_cust_dict):
     y_vars_list = []
 
     for row in csv.DictReader(in_file_name):
-        if row['fecha_dato'] not in ['2015-01-28', '2015-05-28', '2015-06-28', '2016-01-28', '2016-05-28',
+        if row['fecha_dato'] not in ['2015-04-28', '2015-05-28', '2015-06-28', '2016-04-28', '2016-05-28',
                                      '2016-06-28']:
             continue
         # Leave out first month
         cust_id = int(row['ncodpers'])
         # print(row['fecha_dato'])
-        if (row['fecha_dato'] in ['2015-01-28', '2016-01-28']):
+        if (row['fecha_dato'] in ['2015-04-28', '2016-04-28']):
             target_list = getTarget(row)
             lag_cust_dict[cust_id] = target_list[:]
             continue
@@ -192,7 +195,8 @@ def processDataMK(in_file_name, cust_dict, lag_cust_dict):
 
         x_vars = []
         for col in cat_cols:
-            x_vars.append(getIndex(row, col))
+            x_vars += getIndex(row, col)
+
         sex = getIndex(row, 'sexo')
         age = getAge(row)
         x_vars.append(age)
@@ -206,6 +210,7 @@ def processDataMK(in_file_name, cust_dict, lag_cust_dict):
             prev_target_list = cust_dict.get(cust_id, [0] * 22)
             lag_target_list = lag_cust_dict.get(cust_id, [0] * 22)
             x_vars_list.append(x_vars + prev_target_list + lag_target_list)
+            # x_vars_list.append(x_vars + prev_target_list)
         elif row['fecha_dato'] == '2015-06-28':
             prev_target_list = cust_dict.get(cust_id, [0] * 22)
             lag_target_list = lag_cust_dict.get(cust_id, [0] * 22)
@@ -215,7 +220,9 @@ def processDataMK(in_file_name, cust_dict, lag_cust_dict):
                 for ind, prod in enumerate(new_products):
                     if prod > 0:
                         assert len(prev_target_list) == 22
+                        # print(len(x_vars + prev_target_list + lag_target_list))
                         x_vars_list.append(x_vars + prev_target_list + lag_target_list)
+                        # x_vars_list.append(x_vars + prev_target_list)
                         y_vars_list.append(ind)
 
     return x_vars_list, y_vars_list, cust_dict, lag_cust_dict
@@ -237,7 +244,8 @@ def processData(in_file_name, cust_dict):
 
         x_vars = []
         for col in cat_cols:
-            x_vars.append(getIndex(row, col))
+            x_vars += getIndex(row, col)
+
         sex = getIndex(row, 'sexo')
         age = getAge(row)
         x_vars.append(age)
@@ -285,7 +293,7 @@ def runXGB(train_X, train_y, seed_val=0):
 
 if __name__ == "__main__":
     start_time = datetime.datetime.now()
-    data_path = "../input/"
+    data_path = ""
     train_file = open(data_path + "train_ver2.csv")
     print('Starting file processing')
     # x_vars_list, y_vars_list, cust_dict = processData(train_file, {})
@@ -322,5 +330,5 @@ if __name__ == "__main__":
     test_id = np.array(pd.read_csv(data_path + "test_ver2.csv", usecols=['ncodpers'])['ncodpers'])
     final_preds = [" ".join(list(target_cols[pred])) for pred in preds]
     out_df = pd.DataFrame({'ncodpers': test_id, 'added_products': final_preds})
-    out_df.to_csv('sub_xgb_new.csv', index=False)
+    out_df.to_csv('sub_xgb_one_hot_45-6.csv', index=False)
     print(datetime.datetime.now() - start_time)
