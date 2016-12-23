@@ -31,16 +31,16 @@ def parse_tokens(line):
     tags = []
     if line.endswith('\n'):
         line = line[:len(line) - 1]
-        for part in line.split(' '):
-            (w, p) = part.split('_')
-            tokens.append(w)
-            tags.append(p)
+        for param in line.split(' '):
+            token, tag = param.split('_')
+            tokens.append(token)
+            tags.append(tag)
     return tokens, tags
 
 
 def train():
     t = time.time()
-    train_data = open("CTB-auto-pos/allData.txt", "r")
+    train_data = open("CTB-auto-pos/allData.txt", "r", encoding='utf8')
     grammar = generate_grammar(train_data, nltk.Nonterminal('TOP'))
     print("训练花费: %f s" % round(time.time() - t, 2))
     return grammar
@@ -55,8 +55,8 @@ def avg(ll):
 
 if __name__ == '__main__':
     grammar = train()
-    test_data = open("CTB-auto-pos/test.txt", "r")
-    reference_date = open("CTB-auto-pos/ctb5.1.test.bracketed.txt", "r")
+    test_data = open("CTB-auto-pos/test.txt", "r", encoding='utf8')
+    reference_date = open("CTB-auto-pos/ctb5.1.test.bracketed.txt", "r", encoding='utf8')
     parser = viterbi.ViterbiParser(grammar)
     precisions = []
     recalls = []
