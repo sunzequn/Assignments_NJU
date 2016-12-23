@@ -88,7 +88,7 @@ if __name__ == '__main__':
         recalls.append(recall)
         f_measure = round(scores.f_measure(reference, parsed), 4)
         f_measures.append(f_measure)
-        print(str((''.join(tokens), t, precision, recall, f_measure)))
+        print(''.join(tokens), t, precision, recall, f_measure)
     print("测试数据条数: %d" % len(precisions))
     print("总耗时: %f s" % round(total_time, 2))
     print("平均token长度: %f" % avg(tokens_len))
