@@ -19,9 +19,10 @@ def construct_grammar(f, S):
     productions = []
     for line in f:
         tree = Tree.fromstring(line)
-        tree.collapse_unary(collapsePOS = True, collapseRoot = True)
-        tree.chomsky_normal_form(horzMarkov = 2)
-        tree.set_label('TOP')
+        # 把树chomsky_normal_form
+        # tree.collapse_unary(collapsePOS = True, collapseRoot = True)
+        # tree.chomsky_normal_form(horzMarkov = 2)
+        # tree.set_label('TOP')
         for prodution in tree.productions():
             if len(prodution.rhs()) == 1 and isinstance(prodution.rhs()[0], nltk.Nonterminal):
                 print(prodution.rhs())
