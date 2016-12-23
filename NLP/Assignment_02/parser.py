@@ -57,6 +57,13 @@ def train():
     return grammar
 
 
+def avg(ll):
+    num = 0
+    for l in ll:
+        num += l
+    return round(num / len(ll), 4)
+
+
 if __name__ == '__main__':
     grammar = train()
     test_data = open("CTB-auto-pos/test.txt", "r")
@@ -65,20 +72,26 @@ if __name__ == '__main__':
     precisions = []
     recalls = []
     f_measures = []
+    tokens_len = []
+    times = []
     total_time = 0
     for line in test_data:
         tokens, tags = parse_tokens(line)
+        if len(tokens) > 15:
+            reference_date.readline()
+            continue
+        tokens_len.append(len(tokens))
         t = time.time()
         tree_iterator = parser.parse(tokens)
         tree = next(tree_iterator, False)
         t = round(time.time() - t, 2)
         total_time += t
+        times.append(t)
         if tree:
             parsed = set(constituents(tree))
         else:
             parsed = set()
         ref_tree = Tree.fromstring(reference_date.readline())
-        # print(str((tokens, tags, tree, ref)))
         ref_tree = set(constituents(ref_tree))
         precision = scores.precision(ref_tree, parsed)
         precisions.append(precisions)
@@ -87,5 +100,10 @@ if __name__ == '__main__':
         f_measure = scores.f_measure(ref_tree, parsed)
         f_measures.append(f_measures)
         print(str((''.join(tokens), t, precision, recall, f_measure)))
+    print("测试数据条数: %d" % len(precisions))
     print("总耗时: %f s" % round(total_time, 2))
-
+    print("平均token长度: %f" % avg(tokens_len))
+    print("平均耗时: %f s" % avg(times))
+    print("平均精度: %f" % avg(precisions))
+    print("平均召回率: %f" % avg(recalls))
+    print("平均f-measure: %f" % avg(f_measures))
