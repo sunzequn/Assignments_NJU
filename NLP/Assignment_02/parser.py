@@ -5,25 +5,14 @@ import time
 from nltk.tree import Tree
 from nltk.metrics import scores
 from nltk.parse import viterbi
-from os.path import exists
-from pickle import dump, load
 
 
 def generate_grammar(f, s):
     productions = []
     for line in f:
         tree = Tree.fromstring(line)
-        # print(tree)
-        # 把树chomsky_normal_form
-        # tree.collapse_unary(collapsePOS = True, collapseRoot = True)
-        # tree.chomsky_normal_form(horzMarkov = 2)
-        # tree.set_label('TOP')
         for prodution in tree.productions():
-            # if len(prodution.rhs()) == 1 and isinstance(prodution.rhs()[0], nltk.Nonterminal):
-            #     print(prodution.rhs())
             productions += [prodution]
-    with open('productions.txt', 'w') as f:
-        f.write(str(productions))
     return nltk.induce_pcfg(s, productions)
 
 
@@ -91,14 +80,14 @@ if __name__ == '__main__':
             parsed = set(constituents(tree))
         else:
             parsed = set()
-        ref_tree = Tree.fromstring(reference_date.readline())
-        ref_tree = set(constituents(ref_tree))
-        precision = scores.precision(ref_tree, parsed)
-        precisions.append(precisions)
-        recall = scores.recall(ref_tree, parsed)
+        reference = Tree.fromstring(reference_date.readline())
+        reference = set(constituents(reference))
+        precision = round(scores.precision(reference, parsed), 4)
+        precisions.append(precision)
+        recall = round(scores.recall(reference, parsed), 4)
         recalls.append(recall)
-        f_measure = scores.f_measure(ref_tree, parsed)
-        f_measures.append(f_measures)
+        f_measure = round(scores.f_measure(reference, parsed), 4)
+        f_measures.append(f_measure)
         print(str((''.join(tokens), t, precision, recall, f_measure)))
     print("测试数据条数: %d" % len(precisions))
     print("总耗时: %f s" % round(total_time, 2))
