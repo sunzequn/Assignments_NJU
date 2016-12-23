@@ -89,6 +89,8 @@ with open("CTB-auto-pos/test.txt", "r") as test, \
             (w, p) = part.split('_')
             tokens.append(w)
             tags.append(p)
+        if len(tokens) > 10:
+            continue
         print(''.join(tokens))
         time_begin = time.time()
         tree_iterator = parser.parse(tokens)
